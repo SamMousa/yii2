@@ -7,6 +7,8 @@
 
 namespace yii\build\controllers;
 
+use ReflectionMethod;
+use ReflectionProperty;
 use Yii;
 use yii\base\Exception;
 use yii\console\Controller;
@@ -1056,7 +1058,7 @@ class ReleaseController extends Controller
             echo "$class missing @since \n";
         }
 
-        foreach($reflectionClass->getMethods() as $reflectionMethod) {
+        foreach($reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC + ReflectionMethod::IS_PROTECTED) as $reflectionMethod) {
             // Skip methods that are also in the parent class.
             if ($reflectionClass->getParentClass() !== false
                 && $reflectionClass->getParentClass()->hasMethod($reflectionMethod->getName())
@@ -1069,7 +1071,7 @@ class ReleaseController extends Controller
             }
         }
 
-        foreach($reflectionClass->getProperties() as $reflectionProperty) {
+        foreach($reflectionClass->getProperties(ReflectionProperty::IS_PUBLIC + ReflectionProperty::IS_PROTECTED) as $reflectionProperty) {
             // Skip methods that are also in the parent class.
             if ($reflectionClass->getParentClass() !== false
                 && $reflectionClass->getParentClass()->hasProperty($reflectionProperty->getName())
