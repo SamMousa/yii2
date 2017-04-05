@@ -1038,4 +1038,55 @@ class ReleaseController extends Controller
         }
         return $versions;
     }
+
+    public function actionCheckSince()
+    {
+        // Use the classmap.
+        $classes = include(YII2_PATH . '/classes.php');
+
+        foreach ($classes as $class => $file) {
+            $this->checkClassSince($class);
+        }
+    }
+
+    private function checkClassSince($class)
+    {
+        $reflectionClass = new \ReflectionClass($class);
+        if (!$this->checkCommentSince($reflectionClass->getDocComment())) {
+            echo "$class missing @since \n";
+        }
+
+        foreach($reflectionClass->getMethods() as $reflectionMethod) {
+            // Skip methods that are also in the parent class.
+            if ($reflectionClass->getParentClass() !== false
+                && $reflectionClass->getParentClass()->hasMethod($reflectionMethod->getName())
+            ) {
+                continue;
+            }
+
+            if (!$this->checkCommentSince($reflectionMethod->getDocComment())) {
+                echo "{$class}::{$reflectionMethod->getName()} missing @since \n";
+            }
+        }
+
+        foreach($reflectionClass->getProperties() as $reflectionProperty) {
+            // Skip methods that are also in the parent class.
+            if ($reflectionClass->getParentClass() !== false
+                && $reflectionClass->getParentClass()->hasProperty($reflectionProperty->getName())
+            ) {
+                continue;
+            }
+
+            if (!$this->checkCommentSince($reflectionProperty->getDocComment())) {
+                echo "{$class}::\${$reflectionProperty->getName()} missing @since \n";
+            }
+        }
+
+
+    }
+
+    private function checkCommentSince($comment)
+    {
+        return strpos($comment, '@since') !== false;
+    }
 }
