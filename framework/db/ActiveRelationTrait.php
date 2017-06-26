@@ -23,6 +23,8 @@ use yii\base\InvalidParamException;
  */
 trait ActiveRelationTrait
 {
+    use ActiveQueryTrait;
+
     /**
      * @var bool whether this query represents a relation to more than one record.
      * This property is only used in relational context. If true, this relation will

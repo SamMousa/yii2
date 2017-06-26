@@ -16,6 +16,7 @@ namespace yii\db;
  */
 trait ActiveQueryTrait
 {
+    use QueryTrait;
     /**
      * @var string the name of the ActiveRecord class.
      */
@@ -30,6 +31,7 @@ trait ActiveQueryTrait
      */
     public $asArray;
 
+    abstract public function all();
 
     /**
      * Sets the [[asArray]] property.
