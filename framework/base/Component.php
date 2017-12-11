@@ -7,6 +7,7 @@
 
 namespace yii\base;
 
+use League\Event\EmitterTrait;
 use Yii;
 
 /**
@@ -99,6 +100,7 @@ use Yii;
  */
 class Component extends Object
 {
+    use EmitterTrait;
     /**
      * @var array the attached event handlers (event name => handlers)
      */
@@ -481,11 +483,13 @@ class Component extends Object
     public function on($name, $handler, $data = null, $append = true)
     {
         $this->ensureBehaviors();
-        if ($append || empty($this->_events[$name])) {
-            $this->_events[$name][] = [$handler, $data];
-        } else {
-            array_unshift($this->_events[$name], [$handler, $data]);
-        }
+        // POC ignore $data and $append for now
+        $this->addListener($name, $handler);
+//        if ($append || empty($this->_events[$name])) {
+//            $this->_events[$name][] = [$handler, $data];
+//        } else {
+//            array_unshift($this->_events[$name], [$handler, $data]);
+//        }
     }
 
     /**
@@ -500,6 +504,13 @@ class Component extends Object
     public function off($name, $handler = null)
     {
         $this->ensureBehaviors();
+        if (isset($handler)) {
+            return $this->removeListener($name, $handler);
+        } else {
+            return $this->removeAllListeners($name);
+        }
+
+
         if (empty($this->_events[$name])) {
             return false;
         }
@@ -531,24 +542,12 @@ class Component extends Object
     public function trigger($name, Event $event = null)
     {
         $this->ensureBehaviors();
-        if (!empty($this->_events[$name])) {
-            if ($event === null) {
-                $event = new Event;
-            }
-            if ($event->sender === null) {
-                $event->sender = $this;
-            }
-            $event->handled = false;
+        if (!isset($event)) {
+            $event = new Event();
             $event->name = $name;
-            foreach ($this->_events[$name] as $handler) {
-                $event->data = $handler[1];
-                call_user_func($handler[0], $event);
-                // stop further handling if the event is handled
-                if ($event->handled) {
-                    return;
-                }
-            }
+            $event->sender = $this;
         }
+        $this->emit($event);
         // invoke class-level attached handlers
         Event::trigger($this, $name, $event);
     }

@@ -7,6 +7,11 @@
 
 namespace yii\base;
 
+use League\Event\Emitter;
+use League\Event\EmitterAwareTrait;
+use League\Event\EmitterInterface;
+use League\Event\EventInterface;
+
 /**
  * Event is the base class for all event classes.
  *
@@ -24,7 +29,7 @@ namespace yii\base;
  * @author Qiang Xue <qiang.xue@gmail.com>
  * @since 2.0
  */
-class Event extends Object
+class Event extends Object implements EventInterface
 {
     /**
      * @var string the event name. This property is set by [[Component::trigger()]] and [[trigger()]].
@@ -87,12 +92,19 @@ class Event extends Object
      */
     public static function on($class, $name, $handler, $data = null, $append = true)
     {
-        $class = ltrim($class, '\\');
-        if ($append || empty(self::$_events[$name][$class])) {
-            self::$_events[$name][$class][] = [$handler, $data];
-        } else {
-            array_unshift(self::$_events[$name][$class], [$handler, $data]);
+        self::emitter($class)->addListener($name, $handler);
+    }
+
+    private static $_emitters = [];
+    /**
+     * @return EmitterInterface
+     */
+    private static function emitter($class)
+    {
+        if (!isset(self::$_emitters[$class])) {
+            self::$_emitters[$class] = new Emitter();
         }
+        return self::$_emitters[$class];
     }
 
     /**
@@ -109,26 +121,11 @@ class Event extends Object
      */
     public static function off($class, $name, $handler = null)
     {
-        $class = ltrim($class, '\\');
-        if (empty(self::$_events[$name][$class])) {
-            return false;
+        if (isset($handler)) {
+            return self::emitter($class)->removeListener($name, $handler);
+        } else {
+            return self::emitter($class)->removeAllListeners($name);
         }
-        if ($handler === null) {
-            unset(self::$_events[$name][$class]);
-            return true;
-        }
-
-        $removed = false;
-        foreach (self::$_events[$name][$class] as $i => $event) {
-            if ($event[0] === $handler) {
-                unset(self::$_events[$name][$class][$i]);
-                $removed = true;
-            }
-        }
-        if ($removed) {
-            self::$_events[$name][$class] = array_values(self::$_events[$name][$class]);
-        }
-        return $removed;
     }
 
     /**
@@ -186,9 +183,6 @@ class Event extends Object
      */
     public static function trigger($class, $name, $event = null)
     {
-        if (empty(self::$_events[$name])) {
-            return;
-        }
         if ($event === null) {
             $event = new static;
         }
@@ -211,17 +205,66 @@ class Event extends Object
         );
 
         foreach ($classes as $class) {
-            if (empty(self::$_events[$name][$class])) {
-                continue;
-            }
-            
-            foreach (self::$_events[$name][$class] as $handler) {
-                $event->data = $handler[1];
-                call_user_func($handler[0], $event);
-                if ($event->handled) {
-                    return;
-                }
+            static::emitter($class)->emit($event);
+            if ($event->isPropagationStopped()) {
+                return;
             }
         }
+    }
+
+
+    private $_emitter;
+    private $propagationStopped = false;
+    /**
+     * Set the Emitter.
+     *
+     * @param EmitterInterface $emitter
+     *
+     * @return $this
+     */
+    public function setEmitter(EmitterInterface $emitter)
+    {
+        $this->_emitter = $emitter;
+    }
+
+    /**
+     * Get the Emitter.
+     *
+     * @return EmitterInterface
+     */
+    public function getEmitter()
+    {
+        return $this->_emitter;
+    }
+
+    /**
+     * Stop event propagation.
+     *
+     * @return $this
+     */
+    public function stopPropagation()
+    {
+        $this->propagationStopped = true;
+        return $this;
+    }
+
+    /**
+     * Check whether propagation was stopped.
+     *
+     * @return bool
+     */
+    public function isPropagationStopped()
+    {
+        return $this->propagationStopped;
+    }
+
+    /**
+     * Get the event name.
+     *
+     * @return string
+     */
+    public function getName()
+    {
+        return $this->name;
     }
 }
