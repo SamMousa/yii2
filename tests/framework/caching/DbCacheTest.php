@@ -39,10 +39,9 @@ class DbCacheTest extends CacheTestCase
     }
 
     /**
-     * @param  bool            $reset whether to clean up the test database
      * @return \yii\db\Connection
      */
-    public function getConnection($reset = true)
+    public function getConnection()
     {
         if ($this->_connection === null) {
             $databases = self::getParam('databases');
@@ -51,15 +50,6 @@ class DbCacheTest extends CacheTestCase
             $db->dsn = $params['dsn'];
             $db->username = $params['username'];
             $db->password = $params['password'];
-            if ($reset) {
-                $db->open();
-                $lines = explode(';', file_get_contents($params['fixture']));
-                foreach ($lines as $line) {
-                    if (trim($line) !== '') {
-                        $db->pdo->exec($line);
-                    }
-                }
-            }
             $this->_connection = $db;
         }
 
